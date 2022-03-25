@@ -11,10 +11,10 @@ SPDX-License-Identifier: MIT-0
 
 
 /* -- Alt Colours -- */
-/* Background - bright #B2B1B9 */
-/* Boxes - dark #595260 */
-/* Boxes-Hover - darker #2C2E43 */
-/* Buttons - bright #AB8A00  */
+/* Background - #FFFFFF */
+/* Boxes - #00A4E4 */
+/* Boxes-Hover - #516BEB */
+/* Buttons - #EDD2F3 */
 
 
 /* ########## Defaults ################### */
@@ -31,7 +31,7 @@ nav, header, footer {
 body {
     line-height: 1;
     margin: 0;
-    background-color: #B2B1B9;
+    background-color: #FFFFFF;
     /* background-color: #FFFFFF; */
 }
 
@@ -43,7 +43,7 @@ nav {
 }
 
 nav ul {
-    background-color: #595260;
+    background-color: #00A4E4;
     /* background-color: #232F3E; */
     overflow: hidden;
     margin: 0;
@@ -67,16 +67,16 @@ ul.top-nav li a {
     text-align: center;
     padding: 14px;
     text-transform: uppercase;
-    color: #B2B1B9;
+    color: #FFFFFF;
     /* color: #FFFFFF; */
-    background-color: #595260;
+    background-color: #00A4E4;
     /* background-color: #232F3E; */
 }
 
 ul.top-nav li a:hover {
-    background-color: #AB8A00;
+    background-color: #EDD2F3;
     /* background-color: #FF9900; */
-    color: #2C2E43;
+    color: #516BEB;
     /* color: #232F3E; */
 }
 
@@ -167,11 +167,11 @@ ul.top-nav li.dropdownIcon {
 .mcControl .card button {
     padding: 5px;
     margin: 15px;
-    color: #2C2E43;
+    color: #516BEB;
     /* color: #FFFFFF; */
     font-size: 1em;
     text-decoration: none;
-    background-color: #AB8A00;
+    background-color: #EDD2F3;
     /* background-color: #FF9900; */
     opacity: 0.9;
     border: none;
@@ -179,7 +179,7 @@ ul.top-nav li.dropdownIcon {
 }
 
 .mcControl .card button:hover {
-    background-color: #AB8A00;
+    background-color: #EDD2F3;
     /* background-color: #FF9900; */
     opacity: 1;
     transform: scale(1.1);
@@ -219,16 +219,16 @@ ul.top-nav li.dropdownIcon {
     padding: 5px;
     margin: 10px;
     text-align: center;
-    background-color: #595260;
+    background-color: #00A4E4;
     /* background-color: #232F3E; */
-    color: #B2B1B9;
+    color: #FFFFFF;
     /* color: #FFFFFF; */
     border-radius: 5px;
   }
 
   .card:hover {
     box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-    background-color: #2C2E43;
+    background-color: #516BEB;
     /* background-color: #161E2D; */
     transition: 0.3s;
   }
@@ -240,9 +240,9 @@ ul.top-nav li.dropdownIcon {
     left: 0;
     bottom: 0;
     width: 100%;
-    background-color: #595260;
+    background-color: #516BEB;
     /* background-color: #232F3E; */
-    color: #AB8A00;
+    color: #EDD2F3;
     /* color: #FF9900; */
     text-align: center;
 }
@@ -251,9 +251,9 @@ ul.top-nav li.dropdownIcon {
  /* The alert message box */
  .alert {
     padding: 20px;
-    background-color: #AB8A00;
+    background-color: #EDD2F3;
     /* background-color: #FF9900; */
-    color: #2C2E43;
+    color: #516BEB;
     /* color: #FFFFFF; */
     margin-bottom: 15px;
   }
@@ -261,7 +261,7 @@ ul.top-nav li.dropdownIcon {
   /* The close button */
   .closebtn {
     margin-left: 15px;
-    color: #B2B1B9;
+    color: #FFFFFF;
     /* color: #FFFFFF; */
     font-weight: bold;
     float: right;
