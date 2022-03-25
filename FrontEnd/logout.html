@@ -1,0 +1,44 @@
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ SPDX-License-Identifier: MIT-0 -->
+
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en">
+
+<head>
+    <title>Personal Gaming Server Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/ico" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico"> 
+    <script src="js/config.js"></script>
+    <script type="text/javascript" src="/js/index.js"></script>
+</head>
+
+<body onload="updatelinks()">
+    <nav>
+      <ul class="top-nav" id="dropdownClick">
+        <li><a id="home">Home</a></li>
+        <li><a href="#refresh" onclick="location.reload()">Refresh</a></li>
+        <li class="sep"><a>&nbsp;|&nbsp;</a></li>
+        <li><a id="server">Server</a></li>
+        <li><a id="cfnstack">CFN</a></li>
+        <li class="top-nav-right"><a href="javascript:void(0);" onclick="logout()">Sign Out</a></li>
+        <li class="top-nav-right"><a href="index.html">Sign In</a></li>
+        <li class="dropdownIcon"><a href="javascript:void(0);" onclick="dropdownMenu()">&#9776;</a></li>
+      </ul>
+    </nav>
+    <br>
+
+      
+    <div class="mcInfo">
+      <div class="Infocolumn">
+        <div class="card">
+          <h3>You have been Logged Out.  Please Sign in again</h3>
+      </div>
+    </div>
+
+    <div class="footer">
+        <p> Personal Game Server</p>
+    </div>
+</body>
+
+</html>

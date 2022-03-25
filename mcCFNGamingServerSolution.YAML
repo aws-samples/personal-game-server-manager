@@ -1,0 +1,1570 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template to setup a cloud optimised Personal Gaming server.  
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: Personal Gaming Server Configuration
+        Parameters:
+          - GameServer
+          - InstanceType
+          - DiskSize
+          - DiskType
+          - GamingTCPTrafficPortStart
+          - GamingTCPTrafficPortEnd
+          - GamingUDPTrafficPortStart
+          - GamingUDPTrafficPortEnd
+      - Label:
+          default: AWS Configuration
+        Parameters:
+          - KeyName
+          - HostedZoneId
+          - Domain
+          - ShutdownTimeHours
+          - ShutdownTimeMins
+          - IdTagValue
+      - Label:
+          default: You should not need to change anything in this section.
+        Parameters:
+          - IdTagName
+          - LatestAMIIDx86
+    ParameterLabels:
+      GameServer:
+        default: Choose what game server you wish to install
+      InstanceType:
+        default: Select the server size (we recommend selecting a larger instance for initial install and then changing this to a smaller size later).
+      DiskSize:
+        default: How many Gibibytes would you like?
+      DiskType:
+        default: What do you want your hard-drive made from (GP3 is recommended)?
+      KeyName:
+        default: Select the key pair you will use to access server OS
+      Domain:
+        default: Enter the domain name you will use.  Note this should be controlled by the Hosted Zone above (see setup instructions earlier)
+      HostedZoneId:
+        default: Enter the ARN for the Hosted Zone that contains your DNS records (see earlier step)
+      IdTagName:
+        default: Tag name that will be used to identify your gaming server(s)
+      IdTagValue:
+        default: Tag value that will be used to identify your gaming server(s)
+      ShutdownTimeHours:
+        default: The time of day to shutdown the server automatically in hours (NOTE GMT/UTC TIME!! - not local time zone)
+      ShutdownTimeMins:
+        default: The minutes past the hours specfied above to automatically shut down your server
+      LatestAMIIDx86:
+        default: The AMI to use. This is the machine image and includes at a minimum the OS for the server
+      GamingTCPTrafficPortStart:
+        default: Start of the port range that should be accessible from the internet for TCP traffic.  Leave blank if you only want to allow UDP traffic to your server.
+      GamingTCPTrafficPortEnd:
+        default: End of the port range that should be accessible from the internet for TCP traffic. 
+      GamingUDPTrafficPortStart:
+        default: Start of the port range that should be accessible from the internet for UDP traffic.  Leave blank if you only want to allow TCP traffic to your server.
+      GamingUDPTrafficPortEnd:
+        default: End of the port range that should be accessible from the internet for UDP traffic. 
+              
+Parameters:
+  GameServer:
+    Description: Please enter the URL for the shell script to install the game server of your choice - we call this the game cartridge URL.  Please note this must be an uncompressed shell script to run on selected AMI (Ubuntu by default).
+    Type: String
+    AllowedPattern: https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)
+    ConstraintDescription: 'Must be a valid URL.'
+    Default: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/Bash/valheim.sh
+  KeyName:
+    Description: >-
+      This is required so you can access the server.  If there is no option to
+      select one, please go back and create one before trying to run this
+      template again
+    AllowedPattern: .+
+    ConstraintDescription: >-
+      You must choose a keypair otherwise you won't be able to login to your
+      server's OS
+    Type: 'AWS::EC2::KeyPair::KeyName'
+  DiskSize:
+    Description: >-
+      Size of disk - you must choose a disk size of at least 8GiB (because this
+      is the size of the Linux AMI)
+    AllowedPattern: '^([8-9]|([1-9]\d{1,}))$'
+    ConstraintDescription: You must choose a disk size of at least 8 GiB
+    Default: '8'
+    Type: String
+  DiskType:
+    Description: Choose disk type.  GP3 is recommended
+    AllowedPattern: .+
+    AllowedValues:
+      - gp3
+      - gp2
+      - standard
+      - IO2
+    Default: gp3
+    ConstraintDescription: You must choose a disk type
+    Type: String
+  InstanceType:
+    Description: 'Select the AWS EC2 instance type you want.  You can change avaialble options later via the AWS Console - see blog entry for more details'
+    AllowedPattern: .+
+    ConstraintDescription: You must choose a server size
+    Type: String
+    AllowedValues:
+      - t3a.micro
+      - t3a.small
+      - t3a.medium
+      - t3a.large
+      - t3a.xlarge
+      - t3a.2xlarge
+  LatestAMIIDx86:
+    Description: Defaults to the latest Ubuntu AMI ID.  You can replace this if you would like to use a different AMI / Operating System.
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: /aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id
+  GamingTCPTrafficPortStart:
+    Description: Enter port number for your server ingress security group.  This will open your gaming server to TCP traffic to a range of ports with this as the lower boundary.
+    Type: String
+    AllowedPattern: ^(^$|[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$
+    ConstraintDescription: Must be a valid port number.
+  GamingTCPTrafficPortEnd:
+    Description: Enter port number for your server ingress security group.  This will open your gaming server to TCP traffic to a range of ports with this as the upper boundary.
+    Type: String
+    AllowedPattern: ^(^$|[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$
+    ConstraintDescription: Must be a valid port number.
+  GamingUDPTrafficPortStart:
+    Description: Enter port number for your server ingress security group.  This will open your gaming server to UDP traffic to a range of ports with this as the lower boundary.
+    Type: String
+    AllowedPattern: ^(^$|[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$
+    ConstraintDescription: Must be a valid port number.
+    Default: '2456'
+  GamingUDPTrafficPortEnd:
+    Description: Enter port number for your server ingress security group.  This will open your gaming server to UDP traffic to a range of ports with this as the upper boundary.
+    Type: String
+    AllowedPattern: ^(^$|[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$
+    ConstraintDescription: Must be a valid port number.
+    Default: '2458'
+  Domain:
+    Description: Domain name you will use to access your server (e.g. mygameserver.link).  This is optional however without it you will need to configure a new IP address each stop/start
+    Type: String
+  HostedZoneId:
+    Description: Select the ID of your hosted zone - if there isn't one please go back to the section that describes setting up a domain name and hosted zone
+    Type: 'AWS::Route53::HostedZone::Id'
+    ConstraintDescription: >-
+      Although optional, it's required if you are using a custom domain
+      (recommended) so the DNS record for your domain can be updated
+  IdTagName:
+    Description: The name of the tag that will be used to identify your gaming server(s).  DO NOT CHANGE THIS VALUE
+    AllowedPattern: mcServerFinder
+    Default: mcServerFinder
+    Type: String
+    ConstraintDescription: Please set this to "mcserverfinder" this is required so we can find your server(s) to control them
+  IdTagValue:
+    Description: The value of the tag that will be used to identify your gaming server(s).  This can be useful if you want to control different servers independently - such as if you wanted to spin up a server to test out some features or mods without risking your main server - in this case you may want to change the tag value to something like mcDev or mcTest for example.
+    AllowedPattern: .+
+    Type: String
+    Default: mcServer
+    ConstraintDescription: This is a mandatory field - you must pust something in.  We recommend not changing the default value.
+  ShutdownTimeHours:
+    Description: Setting a time here will automatically stop your server at the same time every day.  You adjust the rule, add rules, changes days etc. later directly in the AWS EventBridge Console.  IMPORTANT NOTE - the time must be set in GMT not your local time zone (also note therefore this time will appear to change when going from summer time to winter for relevant time zones).  Leaving blank will not set an auto server shut down rule.
+    Type: String
+    AllowedValues:
+      - 'None - do not auto shut-down'
+      - '23'
+      - '22'
+      - '21'
+      - '20'
+      - '19'
+      - '18'
+      - '17'
+      - '16'
+      - '15'
+      - '14'
+      - '13'
+      - '12'
+      - '11'
+      - '10'
+      - '9'
+      - '8'
+      - '7'
+      - '6'
+      - '5'
+      - '4'
+      - '3'
+      - '2'
+      - '1'
+      - '0'
+  ShutdownTimeMins:
+    Description: Minutes past the hours to auto shut down your server each day
+    Type: String
+    AllowedValues:
+      - 'Not Applicable'
+      - '0'
+      - '5'
+      - '10'
+      - '15'
+      - '20'
+      - '25'
+      - '30'
+      - '35'
+      - '40'
+      - '45'
+      - '50'
+      - '55'
+
+Conditions:
+  ShutdownTimeHoursIsNull: !Equals
+    - !Ref ShutdownTimeHours
+    - 'None - do not auto shut-down'
+  ShutdownTimeMinsIsNull: !Equals
+    - !Ref ShutdownTimeMins
+    - 'None'
+  noSecIngress: !And
+    - !Condition hasTCP
+    - !Condition hasUDP
+  hasTCP: !Not 
+    - !Equals 
+      - !Ref GamingTCPTrafficPortStart
+      - ''
+  hasUDP: !Not 
+    - !Equals
+      - !Ref GamingUDPTrafficPortStart
+      - ''
+
+Resources:
+  mcEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: mcIgAttachment
+    Properties:
+      SecurityGroupIds:
+        - !Ref mcSecurityGroup
+      InstanceType: !Ref InstanceType
+      CreditSpecification:
+        CPUCredits: Standard
+      SubnetId: !Ref mcSubnet
+      IamInstanceProfile: !Ref mcInstanceProfile
+      KeyName: !Ref KeyName
+      Tags:
+        - Key: Name
+          Value: Cloudformation MC server
+        - Key: !Ref IdTagName
+          Value: !Ref IdTagValue
+        - Key: domain
+          Value: !Ref Domain
+        - Key: hostedZoneId
+          Value: !Ref HostedZoneId
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            DeleteOnTermination: 'true'
+            Encrypted: 'false'
+            VolumeSize: !Ref DiskSize
+            VolumeType: !Ref DiskType
+      ImageId: !Ref LatestAMIIDx86
+      UserData: 
+        Fn::Base64: !Sub 
+          - |
+            #!/bin/bash -xe
+            apt update
+            apt upgrade -y
+            apt install -y python-setuptools
+            mkdir -p /opt/aws/bin
+            wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
+            python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz
+            ln -s /root/aws-cfn-bootstrap-latest/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+            echo ${AWS::StackName} > /tmp/mcParamName.txt
+            mkdir -p /usr/games/install
+            cd /usr/games/install
+            wget -O gameserverinstall.sh ${GameServer}
+            chmod +x gameserverinstall.sh
+            ./gameserverinstall.sh
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource mcC2Instance --region ${AWS::Region}
+          - GameServer: !Ref GameServer
+
+  mcPwordParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      DataType: text
+      Description: Parameter to store temp password randomly generated on initial stack creation
+      Name: !Sub mcValheimPW-${AWS::StackName}
+      Tier: Standard
+      Type: String
+      Value: tempValue
+
+  mcInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      Path: /service-role/
+      Roles: 
+        - !Ref mcGamingServerIamRole
+
+  mcGamingServerIamRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: IAM role to allow gaming EC2 server to update parameter with generated app password
+      Path: /service-role/
+      Policies: 
+        - PolicyName: mcPersonalGamingServerIamRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "ssm:PutParameter"
+                Resource: !Sub 
+                  - arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${paramName}
+                  - paramName: !Ref mcPwordParameter
+
+  mcControlApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties: 
+      Description: "Primary API to control gaming server"
+      Name: !Sub mcControlApi-${mcVPC}
+      EndpointConfiguration: 
+        Types:
+          - REGIONAL
+      FailOnWarnings: true
+
+  mcCognitoAuthoriser:
+    Type: 'AWS::ApiGateway::Authorizer'
+    Properties: 
+      IdentitySource: method.request.header.Authorization
+      Name: mcCognitoAuthoriser
+      ProviderARNs: 
+        - !GetAtt mcCognitoUserPool.Arn
+      RestApiId: !Ref mcControlApi
+      Type: COGNITO_USER_POOLS
+
+  mcControlApiDeployment:
+    DependsOn: mcApiGetInfoGetMethod
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties: 
+      RestApiId: !Ref mcControlApi
+      Description: Deployment of gaming control REST API
+      StageName: prod
+
+  mcControlApiResGetInfo:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties: 
+      ParentId: !GetAtt 
+        - mcControlApi
+        - RootResourceId
+      PathPart: getinfo
+      RestApiId: !Ref mcControlApi
+
+  mcControlApiResResize:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties: 
+      ParentId: !GetAtt 
+        - mcControlApi
+        - RootResourceId
+      PathPart: resize
+      RestApiId: !Ref mcControlApi
+
+  mcControlApiResStart:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties: 
+      ParentId: !GetAtt 
+        - mcControlApi
+        - RootResourceId
+      PathPart: start
+      RestApiId: !Ref mcControlApi
+
+  mcControlApiResStop:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties: 
+      ParentId: !GetAtt 
+        - mcControlApi
+        - RootResourceId
+      PathPart: stop
+      RestApiId: !Ref mcControlApi
+
+  mcApiGetInfoGetMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref mcCognitoAuthoriser
+      HttpMethod: GET
+      Integration: 
+          IntegrationHttpMethod: POST
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_TEMPLATES
+          RequestTemplates: 
+            application/json : "{\r\n \"command\": \"getInfo\",\r\n \"mcTagName\": \"$input.params('mctagname')\",\r\n \"mcTagValue\": \"$input.params('mctagvalue')\"\r\n}"
+          TimeoutInMillis: 15000
+          Type: AWS
+          Uri: !Sub
+            - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+            - lambdaArn: !GetAtt mcStartStopLambda.Arn
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Origin : false
+      OperationName: GetInfo
+      RequestParameters: 
+        method.request.querystring.mctagname : false
+        method.request.querystring.mctagvalue : false
+      ResourceId: !Ref mcControlApiResGetInfo
+      RestApiId: !Ref mcControlApi
+
+  mcApiGetInfoOptionsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration: 
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Headers : "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+                method.response.header.Access-Control-Allow-Credentials : "'true'"
+                method.response.header.Access-Control-Allow-Methods : "'GET,OPTIONS'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates: 
+            application/json : '{"statusCode": 200}'
+          TimeoutInMillis: 15000
+          Type: MOCK
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Headers : false
+            method.response.header.Access-Control-Allow-Origin : false
+            method.response.header.Access-Control-Allow-Credentials : false
+            method.response.header.Access-Control-Allow-Methods : false
+      OperationName: GetInfoOPTIONS
+      ResourceId: !Ref mcControlApiResGetInfo
+      RestApiId: !Ref mcControlApi
+
+  mcApiStartGetMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref mcCognitoAuthoriser
+      HttpMethod: GET
+      Integration: 
+          IntegrationHttpMethod: POST
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_TEMPLATES
+          RequestTemplates: 
+            application/json : "{\r\n \"command\": \"start\",\r\n \"mcTagName\": \"$input.params('mctagname')\",\r\n \"mcTagValue\": \"$input.params('mctagvalue')\"\r\n}"
+          TimeoutInMillis: 15000
+          Type: AWS
+          Uri: !Sub
+            - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+            - lambdaArn: !GetAtt mcStartStopLambda.Arn
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Origin : false
+      OperationName: Start
+      RequestParameters: 
+        method.request.querystring.mctagname : false
+        method.request.querystring.mctagvalue : false
+      ResourceId: !Ref mcControlApiResStart
+      RestApiId: !Ref mcControlApi
+
+  mcApiStartOptionsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration: 
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Headers : "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+                method.response.header.Access-Control-Allow-Credentials : "'true'"
+                method.response.header.Access-Control-Allow-Methods : "'GET,OPTIONS'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates: 
+            application/json : '{"statusCode": 200}'
+          TimeoutInMillis: 15000
+          Type: MOCK
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Headers : false
+            method.response.header.Access-Control-Allow-Origin : false
+            method.response.header.Access-Control-Allow-Credentials : false
+            method.response.header.Access-Control-Allow-Methods : false
+      OperationName: StartOPTIONS
+      ResourceId: !Ref mcControlApiResStart
+      RestApiId: !Ref mcControlApi
+
+  mcApiStopGetMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref mcCognitoAuthoriser
+      HttpMethod: GET
+      Integration: 
+          IntegrationHttpMethod: POST
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_TEMPLATES
+          RequestTemplates: 
+            application/json : "{\r\n \"command\": \"stop\",\r\n \"mcTagName\": \"$input.params('mctagname')\",\r\n \"mcTagValue\": \"$input.params('mctagvalue')\"\r\n}"
+          TimeoutInMillis: 15000
+          Type: AWS
+          Uri: !Sub
+            - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+            - lambdaArn: !GetAtt mcStartStopLambda.Arn
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Origin : false
+      OperationName: Stop
+      RequestParameters: 
+        method.request.querystring.mctagname : false
+        method.request.querystring.mctagvalue : false
+      ResourceId: !Ref mcControlApiResStop
+      RestApiId: !Ref mcControlApi
+
+  mcApiStopOptionsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration: 
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Headers : "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+                method.response.header.Access-Control-Allow-Credentials : "'true'"
+                method.response.header.Access-Control-Allow-Methods : "'GET,OPTIONS'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates: 
+            application/json : '{"statusCode": 200}'
+          TimeoutInMillis: 15000
+          Type: MOCK
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Headers : false
+            method.response.header.Access-Control-Allow-Origin : false
+            method.response.header.Access-Control-Allow-Credentials : false
+            method.response.header.Access-Control-Allow-Methods : false
+      OperationName: StopOPTIONS
+      ResourceId: !Ref mcControlApiResStop
+      RestApiId: !Ref mcControlApi
+
+  mcApiResizeGetMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref mcCognitoAuthoriser
+      HttpMethod: GET
+      Integration: 
+          IntegrationHttpMethod: POST
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_TEMPLATES
+          RequestTemplates: 
+            application/json : "{\r\n \"command\": \"reSize\",\r\n \"mcTagName\": \"$input.params('mctagname')\",\r\n \"mcTagValue\": \"$input.params('mctagvalue')\",\r\n \"reSizeType\": \"$input.params('resize')\"\r\n}"
+          TimeoutInMillis: 15000
+          Type: AWS
+          Uri: !Sub
+            - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+            - lambdaArn: !GetAtt mcStartStopLambda.Arn
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Origin : false
+      OperationName: Resize
+      RequestParameters: 
+        method.request.querystring.mctagname : false
+        method.request.querystring.mctagvalue : false
+        method.request.querystring.resize : false
+      ResourceId: !Ref mcControlApiResResize
+      RestApiId: !Ref mcControlApi
+
+  mcApiResizeOptionsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties: 
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration: 
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters: 
+                method.response.header.Access-Control-Allow-Headers : "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                method.response.header.Access-Control-Allow-Origin : "'*'"
+                method.response.header.Access-Control-Allow-Credentials : "'true'"
+                method.response.header.Access-Control-Allow-Methods : "'GET,OPTIONS'"
+              ResponseTemplates: 
+                application/json : ''
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestTemplates: 
+            application/json : '{"statusCode": 200}'
+          TimeoutInMillis: 15000
+          Type: MOCK
+      MethodResponses: 
+        - StatusCode: 200
+          ResponseModels: 
+            application/json : 'Empty'
+          ResponseParameters: 
+            method.response.header.Access-Control-Allow-Headers : false
+            method.response.header.Access-Control-Allow-Origin : false
+            method.response.header.Access-Control-Allow-Credentials : false
+            method.response.header.Access-Control-Allow-Methods : false
+      OperationName: ResizeOPTIONS
+      ResourceId: !Ref mcControlApiResResize
+      RestApiId: !Ref mcControlApi
+
+  mcStateMachineDNS:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      Definition:
+        Comment: Step machine to update DNS while minimising Lambda execution runtime
+        StartAt: getIpUpdateDNS
+        States:
+          getIpUpdateDNS:
+            Type: Task
+            Resource: '${mcUpdateDns}'
+            Retry:
+              - ErrorEquals:
+                  - noIpFound
+                IntervalSeconds: 3
+                MaxAttempts: 10
+                BackoffRate: 1
+              - ErrorEquals:
+                  - States.TaskFailed
+                IntervalSeconds: 30
+                MaxAttempts: 2
+                BackoffRate: 2
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 5
+                MaxAttempts: 5
+                BackoffRate: 2
+            End: true
+      DefinitionSubstitutions:
+        mcUpdateDns: !GetAtt mcUpdateDnsLambda.Arn
+      RoleArn: !GetAtt mcStateMachineIamRole.Arn
+      StateMachineName: !Sub ${AWS::StackName}-mcStateMachine
+      StateMachineType: STANDARD
+
+  mcCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties: 
+      AdminCreateUserConfig: 
+          AllowAdminCreateUserOnly: True
+      AutoVerifiedAttributes: 
+        - email
+      DeviceConfiguration: 
+          ChallengeRequiredOnNewDevice: True
+          DeviceOnlyRememberedOnUserPrompt: True
+      Policies: 
+          PasswordPolicy: 
+              MinimumLength: 8
+              RequireLowercase: True
+              RequireNumbers: True
+              RequireSymbols: True
+              RequireUppercase: True
+              TemporaryPasswordValidityDays: 3
+      Schema:
+        - Name: email
+          Required: true
+      UsernameAttributes: 
+        - email
+      UsernameConfiguration: 
+          CaseSensitive: false
+
+  mcUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties: 
+      Domain: !Join
+        - ''
+        - !Split
+          - '.cloudfront.net'
+          - !GetAtt mcCloudFront.DomainName
+      UserPoolId: !Ref mcCognitoUserPool
+
+  mcCognitoAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      AllowedOAuthFlows: 
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes: 
+        - openid
+        - aws.cognito.signin.user.admin
+      CallbackURLs: 
+        - !Sub https://${mcCloudFront.DomainName}/signed_in.html     
+      DefaultRedirectURI: !Sub https://${mcCloudFront.DomainName}/signed_in.html
+      ExplicitAuthFlows: 
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_CUSTOM_AUTH
+      GenerateSecret: false
+      LogoutURLs: 
+        - !Sub https://${mcCloudFront.DomainName}/logout.html
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders: 
+        - COGNITO
+      UserPoolId: !Ref mcCognitoUserPool
+
+  mcStateMachineIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: State machine execution role
+      Path: /service-role/
+      Policies:
+        - PolicyName: mcStateMachineInline
+          PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - 'lambda:InvokeFunction'
+                  Resource:
+                    - !GetAtt mcUpdateDnsLambda.Arn
+
+  mcCustomResourceLambdaIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: Role for custom resource to allow lambda function to execute
+      Path: /service-role/
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt mcLambdaSourceFilesS3.Arn
+                  - !GetAtt mcS3Bucket.Arn
+                  - !GetAtt mcLoggingBucket.Arn
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                  - 's3:GetObject'
+                Resource:
+                  - !Sub
+                    - ${bucket}/*
+                    - bucket: !GetAtt mcLambdaSourceFilesS3.Arn
+                  - !Sub
+                    - ${bucket}/*
+                    - bucket: !GetAtt mcS3Bucket.Arn
+                  - !Sub
+                    - ${bucket}/*
+                    - bucket: !GetAtt mcLoggingBucket.Arn
+          PolicyName: mcCustomResourceInline
+
+  mcUpdateDnsLambdaIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: Execution role for mcStartStop Lambda function
+      Path: /service-role/
+      Policies:
+        - PolicyName: mcUpdateDnsInline
+          PolicyDocument: 
+            !Sub 
+              - |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action":[
+                          "logs:CreateLogGroup",
+                          "logs:CreateLogStream",
+                          "logs:PutLogEvents"
+                          ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": "route53:ChangeResourceRecordSets",
+                        "Resource": "arn:aws:route53:::hostedzone/${hostedZone}"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action":[
+                          "ec2:DescribeInstances",
+                          "ec2:DescribeTags"
+                          ],
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+              - hostedZone: !Ref HostedZoneId          
+
+  mcStartStopLambdaIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: Execution role for mcStartStop Lambda function
+      Path: /service-role/
+      Policies:
+        - PolicyName: mcStartStopInline
+          PolicyDocument: 
+            !Sub 
+              - |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                        "Effect": "Allow",
+                        "Action":[
+                          "logs:CreateLogGroup",
+                          "logs:CreateLogStream",
+                          "logs:PutLogEvents"
+                          ],
+                        "Resource": "*"
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": "states:StartExecution",
+                          "Resource": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-mcStateMachine"
+                        },
+                        {
+                        "Effect": "Allow",
+                        "Action":[
+                          "ec2:DescribeInstances",
+                          "ec2:DescribeTags",
+                          "ec2:DescribeInstanceTypes"
+                          ],
+                        "Resource": "*"
+                        },
+                        {
+                        "Effect": "Allow",
+                        "Action":[
+                          "ec2:StartInstances",
+                          "ec2:ModifyInstanceAttribute",
+                          "ec2:StopInstances"
+                          ],
+                        "Resource": "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*",
+                        "Condition": {
+                          "StringEquals": {
+                            "ec2:ResourceTag/${tagname}": "${tagvalue}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+              - tagname: !Ref IdTagName
+                tagvalue: !Ref IdTagValue   
+
+  mcBackupIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: backup.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Description: Role for custom resource to allow lambda function to execute
+      Path: /service-role/
+      Policies:
+        - PolicyName: mcBackupInline
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement: 
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                  - ec2:DeleteSnapshot
+                Resource: arn:aws:ec2:*::snapshot/*
+              - Effect: Allow
+                Action:
+                  - ec2:CreateImage
+                  - ec2:DeregisterImage
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CopyImage
+                  - ec2:CopySnapshot
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                Resource: arn:aws:ec2:*:*:image/*
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeTags
+                  - ec2:DescribeImages
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInstanceAttribute
+                  - ec2:DescribeInstanceCreditSpecifications
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeElasticGpus
+                  - ec2:DescribeSpotInstanceRequests
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateSnapshot
+                  - ec2:DeleteSnapshot
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                Resource:
+                  - arn:aws:ec2:*::snapshot/*
+                  - arn:aws:ec2:*:*:volume/*
+              - Action:
+                  - tag:GetResources
+                Resource: "*"
+                Effect: Allow
+              - Effect: Allow
+                Action:
+                  - backup:DescribeBackupVault
+                  - backup:CopyIntoBackupVault
+                Resource: arn:aws:backup:*:*:backup-vault:*
+
+  mcKmsKey:
+      Type: AWS::KMS::Key
+      Properties:
+        Description: "Encryption key gaming server backups"
+        EnableKeyRotation: True
+        Enabled: True
+        KeyPolicy:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                "AWS": { "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root" }
+              Action:
+                - kms:*
+              Resource: "*"
+
+  mcBackupVault:
+    Type: "AWS::Backup::BackupVault"
+    Properties:
+      BackupVaultName: !Sub "${AWS::StackName}-mcBackupVaultWithDailyBackups"
+      EncryptionKeyArn: !GetAtt mcKmsKey.Arn
+
+  mcBackupPlan:
+    Type: "AWS::Backup::BackupPlan"
+    Properties:
+      BackupPlan:
+        BackupPlanName: "mcBackupPlan"
+        BackupPlanRule:
+          - RuleName: "mcDailyBackups"
+            TargetBackupVault: !Ref mcBackupVault
+            ScheduleExpression: "cron(0 5 ? * * *)"
+            Lifecycle: 
+              DeleteAfterDays: 7
+
+  TagBasedBackupSelection:
+    Type: "AWS::Backup::BackupSelection"
+    Properties:
+      BackupSelection:
+        SelectionName: "TagBasedBackupSelection"
+        IamRoleArn: !GetAtt mcBackupIamRole.Arn
+        ListOfTags:
+          - ConditionType: "STRINGEQUALS"
+            ConditionKey: !Ref IdTagName
+            ConditionValue: !Ref IdTagValue
+      BackupPlanId: !Ref mcBackupPlan
+
+  mcCopyToS3Lambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: |
+          import os
+          import urllib.request
+          from urllib.parse import urlparse
+          import boto3
+          import zipfile
+          import cfnresponse
+          def lambda_handler(event, context):
+              s3 = boto3.resource('s3')
+              properties = event['ResourceProperties']
+              urls = properties['sourceUrls']
+              bucket = properties['targetS3Bucket']
+              if event['RequestType'] == 'Create':
+                try:
+                  for i in urls:
+                    url = i.get('url')
+                    urlPath = urlparse(url).path
+                    fileName = os.path.basename(urlPath)
+                    filePath = '/tmp/' + fileName
+                    urllib.request.urlretrieve(url, filePath)
+                    fileName = os.path.basename(filePath)
+                    if i.get('zip'):
+                      zipFileName = os.path.splitext(fileName)[0]+'.zip'
+                      zipFilePath = '/tmp/' + zipFileName
+                      arcName = i.get('filename')
+                      zf = zipfile.ZipFile(zipFilePath, mode ='w')
+                      zf.write(filePath, arcname=arcName)
+                      zf.close()
+                      fileName = zipFileName
+                      filePath = zipFilePath
+                    contentType = i.get('content-type')
+                    if i.get('folder'): 
+                      fileName = i.get('folder')+ '/' + fileName
+                    s3.Object(bucket, fileName).put(Body=open(filePath, 'rb'),ContentType=contentType)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Success - files copied'})
+                except Exception as e:
+                  print(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Response': 'Failed to copy files'})
+              if event['RequestType'] == 'Delete':
+                try:
+                  s3bucket = s3.Bucket(bucket)
+                  s3bucket.objects.delete()
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Success- bucket emptied'})
+                except Exception as e:
+                  print(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Response': 'Failed to empty bucket please clean up manually'})
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Update action not Supported.'})
+      Description: Custom resource lambda to copy required code files from github to S3
+      Role: !GetAtt mcCustomResourceLambdaIamRole.Arn
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Timeout: 10
+  
+  mcUpdateConfigLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          def lambda_handler(event, context):
+              s3 = boto3.client('s3')
+              properties = event['ResourceProperties']
+              configfile = properties['configfile']
+              bucket = properties['S3Bucket']
+              if event['RequestType'] == 'Create':
+                  try:
+                      with open('/tmp/configuration.js', 'wb') as f:
+                          s3.download_fileobj(bucket, configfile, f)
+                      f.close()
+                      f = open('/tmp/configuration.js','rt')
+                      configdata = f.read()
+                      configdata = configdata.replace('REPLACE-WITH-CFURL', properties['cloudfrontURL'])
+                      configdata = configdata.replace('REPLACE-WITH-COGNITO', properties['cognitoclientid'])
+                      configdata = configdata.replace('REPLACE-WITH-COGDOMAIN', properties['cognitodomain'])
+                      configdata = configdata.replace('REPLACE-WITH-APIURL', properties['apiurl'])
+                      configdata = configdata.replace('REPLACE-WITH-IDTAGNAME', properties['idtagname'])
+                      configdata = configdata.replace('REPLACE-WITH-IDTAGVALUE', properties['idtagvalue'])
+                      configdata = configdata.replace('REPLACE-WITH-STACKNAME', properties['stackname'])
+                      configdata = configdata.replace('REPLACE-WITH-POOLS-ID', properties['coguserpool'])
+                      f.close()
+                      f = open('/tmp/configuration.js','wt')
+                      f.write(configdata)
+                      f.close()
+                      s3.put_object(Bucket=bucket,Key=configfile,Body=open('/tmp/configuration.js','rb'),ContentType="application/javascript")
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Updated config file.'})
+                  except Exception as e:
+                      print(e)
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {'Response': 'Failed to copy files'})
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Update or Delete action not Supported.'})
+      Description: Custom resource lambda to update config files on stack build complete
+      Role: !GetAtt mcCustomResourceLambdaIamRole.Arn
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Timeout: 10
+
+  mcgetSrcIpsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import json
+          from urllib.request import urlopen
+          import cfnresponse
+          def lambda_handler(event, context):
+              if event['RequestType'] == 'Create':
+                  try:
+                      ip_ranges = urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json')
+                      ip_ranges = json.loads(ip_ranges.read())['prefixes']
+                      ec2instanceconnect_ips = [item['ip_prefix'] for item in ip_ranges if item["service"] == "EC2_INSTANCE_CONNECT" and item["region"] == event['ResourceProperties']['region']]
+                      ec2instanceconnect_ips = ec2instanceconnect_ips[0]
+                      responseData = {'srcip': ec2instanceconnect_ips}
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                  except Exception as e:
+                      print(e)
+                      cfnresponse.send(event, context, cfnresponse.FAILED, {'Response': 'Failed to get source IP for EC2 instance connect though I am perplexed as to why','srcip':'0.0.0.0/0'})
+              else:
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Response': 'Update or Delete action not Supported.'})         
+      Description: Custom resource lambda to obtain source IP address range for EC2 Instance Connect in current region
+      Role: !GetAtt mcCustomResourceLambdaIamRole.Arn
+      Handler: index.lambda_handler
+      Runtime: python3.8
+      Timeout: 10
+
+  mcStartStopLambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: mcCopyLambdaFiles
+    Properties:
+      Code:
+        S3Bucket: !Ref mcLambdaSourceFilesS3
+        S3Key: gaming_server_start_stop-v1_0.zip
+      Description: Lambda function to control gaming server instances
+      Environment:
+        Variables:
+          micro: t3a.micro
+          small: t3a.small
+          medium: t3a.medium
+          large: t3a.large
+          stepfunctionarn: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-mcStateMachine'
+      Handler: lambda_function.lambda_handler
+      MemorySize: 128
+      PackageType: Zip
+      Role: !GetAtt mcStartStopLambdaIamRole.Arn
+      Runtime: python3.8
+      Timeout: 10
+
+  mcUpdateDnsLambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: mcCopyLambdaFiles
+    Properties:
+      Code:
+        S3Bucket: !Ref mcLambdaSourceFilesS3
+        S3Key: mcUpdateDNS-v1_0.zip
+      Description: Lambda to update DNS
+      Handler: lambda_function.lambda_handler
+      MemorySize: 128
+      PackageType: Zip
+      Role: !GetAtt mcUpdateDnsLambdaIamRole.Arn
+      Runtime: python3.8
+      Timeout: 10
+
+  mcLambdaSourceFilesS3:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: Private
+      PublicAccessBlockConfiguration: 
+          BlockPublicAcls: True
+          BlockPublicPolicy: True
+          IgnorePublicAcls: True
+          RestrictPublicBuckets: True
+      LoggingConfiguration: 
+        DestinationBucketName: !Ref mcLoggingBucket
+        LogFilePrefix: mcS3BucketLogs/
+
+  mcS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: Private
+      PublicAccessBlockConfiguration: 
+          BlockPublicAcls: True
+          BlockPublicPolicy: True
+          IgnorePublicAcls: True
+          RestrictPublicBuckets: True
+      LoggingConfiguration: 
+        DestinationBucketName: !Ref mcLoggingBucket
+        LogFilePrefix: mcS3BucketLogs/
+
+  mcS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref mcS3Bucket
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Sub
+              - 'arn:aws:s3:::${mcS3Bucket}/*'
+              - mcS3Bucket: !Ref mcS3Bucket
+            Principal: 
+              AWS: !Sub
+                - 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessiId}'
+                - OriginAccessiId: !Ref mcOriginAccessId
+
+  mcLoggingBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyID: KMS-KEY-ARN
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      AccessControl: LogDeliveryWrite
+
+  mcOriginAccessId:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig: 
+        Comment: Origin Access ID for front end control site
+
+  mcCloudFront:
+    Type: AWS::CloudFront::Distribution
+    DependsOn: mcCopyFrontEndFiles
+    Properties: 
+      DistributionConfig: 
+        Comment: Gaming server control centre
+        DefaultCacheBehavior: 
+          AllowedMethods: 
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          TargetOriginId: mcCloudFrontS3OriginID
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: True
+        HttpVersion: http2
+        IPV6Enabled: true
+        Logging: 
+          Bucket: !GetAtt mcLoggingBucket.DomainName
+          IncludeCookies: True
+          Prefix: mcCloudFrontLogs/
+        Origins: 
+            - DomainName: !Sub ${mcS3Bucket}.s3.${AWS::Region}.amazonaws.com 
+              Id: mcCloudFrontS3OriginID
+              S3OriginConfig: 
+                OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${mcOriginAccessId}
+        PriceClass: PriceClass_100
+        ViewerCertificate: 
+            CloudFrontDefaultCertificate: True
+
+
+  mcStartStopLambdaPermissionGetInfo:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction 
+      FunctionName: !GetAtt mcStartStopLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${mcControlApi}/*/GET/getinfo
+
+
+  mcStartStopLambdaPermissionStart:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction 
+      FunctionName: !GetAtt mcStartStopLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${mcControlApi}/*/GET/start
+
+  mcStartStopLambdaPermissionStop:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction 
+      FunctionName: !GetAtt mcStartStopLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${mcControlApi}/*/GET/stop
+
+
+  mcStartStopLambdaPermissionResize:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction 
+      FunctionName: !GetAtt mcStartStopLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${mcControlApi}/*/GET/resize
+
+  mcSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CF Gaming server Security Group
+      GroupDescription: Enable HTTP access via port 80 locked down to the load balancer
+      VpcId: !Ref mcVPC
+      
+  mcSecurityGroupIngressTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: hasTCP
+    Properties:
+      Description: Rule to allow gaming clients connect to your game server over TCP IPv4
+      GroupId: !Ref mcSecurityGroup
+      IpProtocol: TCP
+      FromPort: !Ref GamingTCPTrafficPortStart
+      ToPort: !Ref GamingTCPTrafficPortEnd
+      CidrIp: 0.0.0.0/0
+      
+  mcSecurityGroupIngressUDP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: hasUDP
+    Properties:
+      Description: Rule to allow gaming clients connect to your game server over UDP IPv4
+      GroupId: !Ref mcSecurityGroup
+      IpProtocol: UDP
+      FromPort: !Ref GamingUDPTrafficPortStart
+      ToPort: !Ref GamingUDPTrafficPortEnd
+      CidrIp: 0.0.0.0/0
+
+  mcSecurityGroupIngressEC2Connect:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Rule to allow EC2 Instance Connect to SSH into instance
+      GroupId: !Ref mcSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !GetAtt mcGetInstanceConnectIps.srcip
+      
+  mcInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CF Gamine Server IG
+  
+  mcRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CF Gaming Server Route Table
+      VpcId: !Ref mcVPC
+  
+  mcRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref mcInternetGateway
+      RouteTableId: !Ref mcRouteTable
+  
+  mcSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CF Gaming Server Subnet
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref mcVPC
+  
+  mcVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Personal Gaming Server VPC
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+  
+  mcIgAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref mcVPC
+      InternetGatewayId: !Ref mcInternetGateway
+  
+  mcRouteTblAttach:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref mcRouteTable
+      SubnetId: !Ref mcSubnet
+
+  mcBedTime:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: Rule to shutdown server at certain time every day
+      ScheduleExpression: !Join
+        - ''
+        - - 'cron('
+          - !If
+            - ShutdownTimeHoursIsNull
+            - '0'
+            - !Ref ShutdownTimeMins
+          - ' '
+          - !If
+            - ShutdownTimeHoursIsNull
+            - '0'
+            - !Ref ShutdownTimeHours
+          - ' * * ? *)'
+      State: !If
+        - ShutdownTimeHoursIsNull
+        - DISABLED
+        - ENABLED
+      Targets: 
+        -   Arn: !GetAtt mcStartStopLambda.Arn
+            Id: mcStartStopLambdaFunction
+            Input: !Sub
+              - '{ "command": "stop", "mcTagName": "${idtagname}", "mcTagValue": "${idtagvalue}" }'
+              - idtagname: !Ref IdTagName
+                idtagvalue: !Ref IdTagValue
+
+  mcBedTimeLambdaPermission: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref mcStartStopLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt mcBedTime.Arn
+
+  mcCopyFrontEndFiles:
+    Type: Custom::WebFileCopy 
+    Properties:
+      ServiceToken: !GetAtt mcCopyToS3Lambda.Arn
+      targetS3Bucket: !Ref mcS3Bucket
+      sourceUrls:
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/styles.css
+          content-type: text/css
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/index.html
+          content-type: text/html
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/signed_in.html
+          content-type: text/html
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/logout.html
+          content-type: text/html
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/js/config.js
+          content-type: application/javascript
+          folder: js
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/FrontEnd/js/index.js
+          content-type: application/javascript
+          folder: js
+
+  mcCopyLambdaFiles:
+    Type: Custom::WebFileCopy
+    Properties:
+      ServiceToken: !GetAtt mcCopyToS3Lambda.Arn
+      targetS3Bucket: !Ref mcLambdaSourceFilesS3
+      sourceUrls:
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/Lambda/mcUpdateDNS-v1_0.py
+          content-type: application/zip
+          zip: True
+          filename: lambda_function.py
+        - url: https://raw.githubusercontent.com/aws-samples/personal-game-server-manager/main/Lambda/gaming_server_start_stop-v1_0.py    
+          content-type: application/zip
+          zip: True
+          filename: lambda_function.py
+
+  mcUpdateConfig:
+    Type: Custom::UpdateFileInS3
+    Properties:
+      ServiceToken: !GetAtt mcUpdateConfigLambda.Arn
+      configfile: js/config.js
+      S3Bucket: !Ref mcS3Bucket
+      cloudfrontURL: !Sub https://${mcCloudFront.DomainName}
+      cognitoclientid: !Ref mcCognitoAppClient
+      cognitodomain: !Sub ${mcUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+      apiurl: !Sub https://${mcControlApi}.execute-api.${AWS::Region}.amazonaws.com/prod/
+      idtagname: !Ref IdTagName
+      idtagvalue: !Ref IdTagValue
+      stackname: !Ref AWS::StackName
+      coguserpool: !Ref mcCognitoUserPool
+
+  mcGetInstanceConnectIps: 
+    Type: Custom::GetSourceIps
+    Properties:
+      ServiceToken: !GetAtt mcgetSrcIpsLambda.Arn
+      region: !Ref AWS::Region
+
+Outputs:
+  mcControlApiUrl:
+    Description: This is the URL for the API to control your gaming server instances
+    Value: !Sub https://${mcControlApi}.execute-api.${AWS::Region}.amazonaws.com/prod/
+  
+  mcPublicIp:
+    Description: This is the public IP for your gaming server, you will need to run a "start" command to associate your domain name with it (if you selected one)
+    Value: !GetAtt mcEC2Instance.PublicIp
+
+  mcCognitoUserPoolId:
+    Description: Unique user pool ID for the people you want to be able to control your server
+    Value: !Ref mcCognitoUserPool
+  
+  mcCloudfrontUrl:
+    Description: The default domain of your control website.  Note you can update this to be a CNAME of your custom domain. 
+    Value: !Sub https://${mcCloudFront.DomainName}
+
+  mcS3Bucket:
+    Description: The name of the created S3 bucket
+    Value: !GetAtt mcS3Bucket.Arn
+  
+  mcTagName:
+    Description: Tag name used.  This should not have been changed, and should be mcServerFinder
+    Value: !Ref IdTagName
+
+  mcTagValue:
+    Description: Tag value selected to identify servers to be controlled by web app
+    Value: !Ref IdTagValue
+
+  mcCognitoDomainName:
+    Description: The domain name for the Cognito hosted UI
+    Value: !Sub ${mcUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+
+  mcCognitoClientID:
+    Description: The clientID for the Cognito user pool
+    Value: !Ref mcCognitoAppClient
+    

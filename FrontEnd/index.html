@@ -1,0 +1,131 @@
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0 -->
+
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en">
+
+<head>
+  <meta charset="utf-8"/>
+  <title>Personal Gaming Server Manager</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/ico" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico"> 
+
+  <script src="js/config.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+
+  <script src="https://cdn.amplify.aws/packages/core/4.3.0/aws-amplify-core.min.js"
+    integrity="sha384-7Oh+5w0l7XGyYvSqbKi2Q7SA5K640V5nyW2/LEbevDQEV1HMJqJLA1A00z2hu8fJ" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.amplify.aws/packages/auth/4.3.8/aws-amplify-auth.min.js"
+    integrity="sha384-jfkXCEfYyVmDXYKlgWNwv54xRaZgk14m7sjeb2jLVBtUXCD2p+WU8YZ2mPZ9Xbdw" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+</head>
+
+<body onload="init()">
+  <nav>
+    <ul class="top-nav" id="dropdownClick">
+      <li><a id="home">Home</a></li>
+      <li><a href="#refresh" onclick="location.reload()">Refresh</a></li>
+      <li class="sep"><a>&nbsp;|&nbsp;</a></li>
+      <li><a id="server">Server</a></li>
+      <li><a id="cfnstack">CFN</a></li>
+      <li class="top-nav-right"><a href="javascript:void(0);" onclick="logout()">Sign Out</a></li>
+      <li class="top-nav-right"><a href="index.html">Sign In</a></li>
+      <li class="dropdownIcon"><a href="javascript:void(0);" onclick="dropdownMenu()">&#9776;</a></li>
+    </ul>
+  </nav>
+  
+  <br>
+  
+  <div class="mcInfo">
+    <div class="Infocolumn">
+      <div class="card">
+        <h3>DNS</h3>
+        <p class="Loading">Loading...</p>
+        <p id="mcInfoDNS"></p>
+      </div>
+    </div>
+  
+    <div class="Infocolumn">
+      <div class="card">
+        <h3>State</h3>
+        <p class="Loading">Loading...</p>
+        <p id="mcInfoState"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mcInfo">
+    <div class="Infocolumn">
+      <div class="card">
+        <h3>IP</h3>
+        <p class="Loading">Loading...</p>
+        <p id="mcInfoIP"></p>
+      </div>
+    </div>
+    
+    <div class="Infocolumn">
+      <div class="card">
+        <h3>Type</h3>
+        <p class="Loading">Loading...</p>
+        <p id="mcInfoType"></p>
+      </div>
+    </div>
+  </div>
+
+  <hr style="margin:10px;">
+
+    <div class="mcControl">
+      <div class="Controlcolumn">
+        <div class="card">
+          <h3>Stop</h3>
+          <button onclick="showAlert('Stopping the Server'); stopServer();">Stop</button>
+        </div>
+      </div>
+    
+      <div class="Controlcolumn">
+        <div class="card">
+          <h3>Start</h3>
+          <button onclick="showAlert('Starting the Server'); startServer();">Start</button>
+        </div>
+      </div>
+
+      <div class="Controlcolumn">
+        <div class="card">
+          <label for="instanceSize" >Resize:</label>
+          <select name="instanceSize" id="instanceSize" style="margin-top:18px">
+            <option value="micro">Micro</option>
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+          </select>
+          <br>
+          <button style="margin-top: 30px;" onclick="showAlert('Please wait... Resizing your server'); resizeServer();">Resize</button>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin:10px;">
+
+ 
+    <div class="alert" style="display:none;">
+      <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+      <p class="alertmsg" style="display:inline;">Doing the things you asked.</p>
+    </div> 
+
+
+    <div class="footer">
+      <p> Personal Game Server </p>
+    </div>
+
+ 
+  <script>
+
+
+  </script>
+
+  
+</body>
+
+</html>

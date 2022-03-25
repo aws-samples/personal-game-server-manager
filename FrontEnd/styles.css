@@ -1,0 +1,278 @@
+/* 
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+*/
+
+/* -- Amazon Colours -- */
+/* White (background & text) #FFFFFF */
+/* SquidInk #232F3E */
+/* DarkSquidInk #161E2D */
+/* Smile (buttons & footer text) #FF9900 */
+
+
+/* -- Alt Colours -- */
+/* Background - bright #B2B1B9 */
+/* Boxes - dark #595260 */
+/* Boxes-Hover - darker #2C2E43 */
+/* Buttons - bright #AB8A00  */
+
+
+/* ########## Defaults ################### */
+
+html {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding-bottom: 4em;
+}
+
+nav, header, footer {
+    display: block;
+}
+
+body {
+    line-height: 1;
+    margin: 0;
+    background-color: #B2B1B9;
+    /* background-color: #FFFFFF; */
+}
+
+/* ########## Nav Bar #################### */
+
+nav {
+    width: 100%;
+    margin: 0;
+}
+
+nav ul {
+    background-color: #595260;
+    /* background-color: #232F3E; */
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+ul.top-nav li {
+    list-style: none;
+    float: left;
+}
+
+ul.top-nav li.top-nav-right {
+    list-style: none;
+    float: right;
+}
+
+ul.top-nav li a {
+    display: block;
+    text-decoration: none;
+    min-height: 16px;
+    text-align: center;
+    padding: 14px;
+    text-transform: uppercase;
+    color: #B2B1B9;
+    /* color: #FFFFFF; */
+    background-color: #595260;
+    /* background-color: #232F3E; */
+}
+
+ul.top-nav li a:hover {
+    background-color: #AB8A00;
+    /* background-color: #FF9900; */
+    color: #2C2E43;
+    /* color: #232F3E; */
+}
+
+ul.top-nav li.dropdownIcon {
+    display: none;
+}
+
+/* ########## Mobile ######## */
+
+@media screen and (max-width: 680px) {
+    ul.top-nav li:not(:nth-child(1)) {
+        display: none;
+    }
+
+    ul.top-nav li.dropdownIcon {
+        display: block;
+        float: right;
+    }
+
+    ul.top-nav.responsive li.dropdownIcon {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+
+    ul.top-nav.responsive li.sep {
+        display: none;
+    }
+
+    ul.top-nav.responsive {
+        position: relative;
+    }
+
+    ul.top-nav.responsive li {
+        display: inline;
+        float: none;
+    }
+
+    ul.top-nav.responsive li a {
+        display: block;
+        text-align: left;
+    }
+}
+
+/* ############## McInfo ############## */
+
+/* Float two columns side by side */
+.Infocolumn {
+    float: left;
+    width: 50%;
+  }
+  
+  /* Remove extra left and right margins, due to padding */
+  .mcInfo {margin: -5px;}
+  
+  /* Clear floats after the columns */
+  .mcInfo:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  /* Responsive columns */
+  @media screen and (max-width: 680px) {
+    .Infocolumn {
+      width: 100%;
+      display: block;
+      margin-bottom: 20px;
+    }
+  }
+
+/* ############## mcControl ############## */
+.Controlcolumn {
+    float: left;
+    width: 33.3%;
+  }
+  
+  /* Remove extra left and right margins, due to padding */
+.mcControl {margin: -5px;}
+  
+  /* Clear floats after the columns */
+.mcControl:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.mcControl .card button {
+    padding: 5px;
+    margin: 15px;
+    color: #2C2E43;
+    /* color: #FFFFFF; */
+    font-size: 1em;
+    text-decoration: none;
+    background-color: #AB8A00;
+    /* background-color: #FF9900; */
+    opacity: 0.9;
+    border: none;
+    border-radius: 3px;
+}
+
+.mcControl .card button:hover {
+    background-color: #AB8A00;
+    /* background-color: #FF9900; */
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.mcControl .card button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.mcControl .card label {
+    font-weight: bold;
+    font-size: 1.17em;
+}
+
+.mcControl .Controlcolumn .card select {
+    margin: 0px;
+    border: none;
+    display: inline-block;
+    font-size: 1.1em;
+}
+
+  /* Responsive columns */
+  @media screen and (max-width: 680px) {
+    .Controlcolumn {
+      width: 100%;
+      display: block;
+      margin-bottom: 20px;
+    }
+  }
+
+/* ############# Cards ################ */
+  
+  /* Style the counter cards */
+  .card {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    padding: 5px;
+    margin: 10px;
+    text-align: center;
+    background-color: #595260;
+    /* background-color: #232F3E; */
+    color: #B2B1B9;
+    /* color: #FFFFFF; */
+    border-radius: 5px;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    background-color: #2C2E43;
+    /* background-color: #161E2D; */
+    transition: 0.3s;
+  }
+
+
+/* ############## Footer ############### */
+.footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #595260;
+    /* background-color: #232F3E; */
+    color: #AB8A00;
+    /* color: #FF9900; */
+    text-align: center;
+}
+
+/* ################ Alerts ################### */
+ /* The alert message box */
+ .alert {
+    padding: 20px;
+    background-color: #AB8A00;
+    /* background-color: #FF9900; */
+    color: #2C2E43;
+    /* color: #FFFFFF; */
+    margin-bottom: 15px;
+  }
+  
+  /* The close button */
+  .closebtn {
+    margin-left: 15px;
+    color: #B2B1B9;
+    /* color: #FFFFFF; */
+    font-weight: bold;
+    float: right;
+    font-size: 22px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  
+  /* When moving the mouse over the close button */
+  .closebtn:hover {
+    color: black;
+  } 
+
