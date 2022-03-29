@@ -12,9 +12,9 @@ SPDX-License-Identifier: MIT-0
 
 /* -- Alt Colours -- */
 /* Background - #FFFFFF */
-/* Boxes - #00A4E4 */
-/* Boxes-Hover - #516BEB */
-/* Buttons - #EDD2F3 */
+/* Boxes - #18BEFF */
+/* Boxes-Hover - #00A4E4 */
+/* Buttons - #FF9901 */
 
 
 /* ########## Defaults ################### */
@@ -43,7 +43,7 @@ nav {
 }
 
 nav ul {
-    background-color: #00A4E4;
+    background-color: #18BEFF;
     /* background-color: #232F3E; */
     overflow: hidden;
     margin: 0;
@@ -69,14 +69,14 @@ ul.top-nav li a {
     text-transform: uppercase;
     color: #FFFFFF;
     /* color: #FFFFFF; */
-    background-color: #00A4E4;
+    background-color: #18BEFF;
     /* background-color: #232F3E; */
 }
 
 ul.top-nav li a:hover {
-    background-color: #EDD2F3;
+    background-color: #FF9901;
     /* background-color: #FF9900; */
-    color: #516BEB;
+    color: #00A4E4;
     /* color: #232F3E; */
 }
 
@@ -167,11 +167,12 @@ ul.top-nav li.dropdownIcon {
 .mcControl .card button {
     padding: 5px;
     margin: 15px;
-    color: #516BEB;
+    color: #000000;
+    /* color: #00A4E4; */
     /* color: #FFFFFF; */
     font-size: 1em;
     text-decoration: none;
-    background-color: #EDD2F3;
+    background-color: #FF9901;
     /* background-color: #FF9900; */
     opacity: 0.9;
     border: none;
@@ -179,7 +180,7 @@ ul.top-nav li.dropdownIcon {
 }
 
 .mcControl .card button:hover {
-    background-color: #EDD2F3;
+    background-color: #FF9901;
     /* background-color: #FF9900; */
     opacity: 1;
     transform: scale(1.1);
@@ -219,7 +220,7 @@ ul.top-nav li.dropdownIcon {
     padding: 5px;
     margin: 10px;
     text-align: center;
-    background-color: #00A4E4;
+    background-color: #18BEFF;
     /* background-color: #232F3E; */
     color: #FFFFFF;
     /* color: #FFFFFF; */
@@ -228,7 +229,7 @@ ul.top-nav li.dropdownIcon {
 
   .card:hover {
     box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-    background-color: #516BEB;
+    background-color: #00A4E4;
     /* background-color: #161E2D; */
     transition: 0.3s;
   }
@@ -240,9 +241,9 @@ ul.top-nav li.dropdownIcon {
     left: 0;
     bottom: 0;
     width: 100%;
-    background-color: #516BEB;
+    background-color: #00A4E4;
     /* background-color: #232F3E; */
-    color: #EDD2F3;
+    color: #FF9901;
     /* color: #FF9900; */
     text-align: center;
 }
@@ -251,9 +252,9 @@ ul.top-nav li.dropdownIcon {
  /* The alert message box */
  .alert {
     padding: 20px;
-    background-color: #EDD2F3;
+    background-color: #FF9901;
     /* background-color: #FF9900; */
-    color: #516BEB;
+    color: #00A4E4;
     /* color: #FFFFFF; */
     margin-bottom: 15px;
   }
