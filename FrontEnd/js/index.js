@@ -49,7 +49,7 @@ async function show(data) {
       }
       else {
         var dnsCard = document.getElementById('mcInfoDNS').parentNode;
-        dnsCard.style.backgroundColor = '#232F3E';
+        dnsCard.style.backgroundColor = '#18BEFF';
         dnsCard.style.opacity = '1';
       }
     }
