@@ -4,7 +4,7 @@ Hosting your own personal gaming server is increasingly common given all the ben
 
 In the below blog post we will show you how to achieve both a low cost and high security solution while also providing the added benefit of flexibility to resize the server from a single core and 0.5 GiB of memory all the way to the biggest servers AWS has to offer and back down again.  
 
-[INSERT BLOG POST URL HERE]
+More details and instructions on this solution can be found on the AWS Gametech blog here: https://aws.amazon.com/blogs/gametech//hosting-your-own-dedicated-valheim-server-in-the-cloud/
 
 ## Security
 
