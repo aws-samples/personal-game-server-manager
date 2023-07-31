@@ -1263,12 +1263,6 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               KMSMasterKeyID: KMS-KEY-ARN
-      PublicAccessBlockConfiguration: 
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      AccessControl: LogDeliveryWrite
 
   mcOriginAccessId:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
