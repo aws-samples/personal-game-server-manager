@@ -1263,6 +1263,10 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: 'aws:kms'
               KMSMasterKeyID: KMS-KEY-ARN
+      AccessControl: LogDeliveryWrite
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
 
   mcOriginAccessId:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
