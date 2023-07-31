@@ -1264,8 +1264,6 @@ Resources:
               SSEAlgorithm: 'aws:kms'
               KMSMasterKeyID: KMS-KEY-ARN
 
-
-
   mcOriginAccessId:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties: 
